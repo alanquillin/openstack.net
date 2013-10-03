@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using Newtonsoft.Json;
-using net.openstack.Core.Domain;
 using net.openstack.Core.Domain.Rackspace;
 
 namespace net.openstack.Providers.Rackspace.Objects.Response

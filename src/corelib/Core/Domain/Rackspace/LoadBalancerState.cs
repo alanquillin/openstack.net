@@ -24,6 +24,7 @@ namespace net.openstack.Core.Domain.Rackspace
         private static readonly LoadBalancerState _deleted = FromName("DELETED");
         private static readonly LoadBalancerState _pendingDelete = FromName("PENDING_DELETE");
         private static readonly LoadBalancerState _pendingUpdate = FromName("PENDING_UPDATE");
+        private static readonly LoadBalancerState _suspended = FromName("SUSPENDED");
         private static readonly LoadBalancerState _error = FromName("ERROR");
         private static readonly LoadBalancerState _unknown = FromName("UNKNOWN");
 
@@ -99,6 +100,14 @@ namespace net.openstack.Core.Domain.Rackspace
         public static LoadBalancerState PendingUpdate
         {
             get { return _pendingUpdate; }
+        }
+
+        /// <summary>
+        /// Gets an <see cref="LoadBalancerState"/> representing a load balancer which is suspended.
+        /// </summary>
+        public static LoadBalancerState Suspended
+        {
+            get { return _suspended; }
         }
 
         /// <summary>

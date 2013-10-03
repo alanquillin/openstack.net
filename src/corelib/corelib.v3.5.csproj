@@ -45,11 +45,14 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Threading">
       <HintPath>..\packages\TaskParallelLibrary.1.0.2856.0\lib\Net35\System.Threading.dll</HintPath>
     </Reference>
     <Reference Include="System.Web" />
+    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\Caching\ICache`1.cs" />
@@ -113,6 +116,7 @@
     <Compile Include="Core\Domain\FlavorDetails.cs" />
     <Compile Include="Core\Exceptions\ContainerNotEmptyException.cs" />
     <Compile Include="Core\Exceptions\ImageEnteredErrorStateException.cs" />
+    <Compile Include="Core\Exceptions\LoadBalancerEnteredErrorStateException.cs" />
     <Compile Include="Core\Exceptions\NamespaceDoc.cs" />
     <Compile Include="Core\Exceptions\Response\NamespaceDoc.cs" />
     <Compile Include="Core\Exceptions\SnapshotEnteredErrorStateException.cs" />
@@ -181,15 +185,20 @@
     <Compile Include="Providers\Rackspace\Objects\NewLoadBalancer.cs" />
     <Compile Include="Providers\Rackspace\Objects\NewLoadBalancerVirtualIP.cs" />
     <Compile Include="Providers\Rackspace\Objects\Request\PasswordCredential.cs" />
+    <Compile Include="Providers\Rackspace\Objects\Request\UpdateLoadBalancerNodeRequest.cs" />
+    <Compile Include="Providers\Rackspace\Objects\Request\UpdateLoadBalancerRequest.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\BulkDeleteResponse.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\ListEndpointsResponse.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\ListLoadBalancerNodesResponse.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\ListLoadBalancersResponse.cs" />
+    <Compile Include="Providers\Rackspace\Objects\Response\LoadBalancerNodeResponse.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\LoadBalancerResponse.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\MetadataItemResponse.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\ListVirtualInterfacesResponse.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\NamespaceDoc.cs" />
     <Compile Include="Providers\Rackspace\Objects\Response\RoleResponse.cs" />
+    <Compile Include="Providers\Rackspace\Objects\UpdateLoadBalancer.cs" />
+    <Compile Include="Providers\Rackspace\Objects\UpdateLoadBalancerNode.cs" />
     <Compile Include="Providers\Rackspace\Validators\CloudFilesValidator.cs" />
     <Compile Include="Core\Validators\IObjectStorageValidator.cs" />
     <Compile Include="Providers\Rackspace\EncodeDecodeProvider.cs" />

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using JSIStudios.SimpleRESTServices.Client;
 using JSIStudios.SimpleRESTServices.Client.Json;
 using net.openstack.Core.Domain;
 using net.openstack.Core.Domain.Rackspace;
+using net.openstack.Core.Exceptions;
 using net.openstack.Core.Providers;
 using net.openstack.Core.Providers.Rackspace;
 using net.openstack.Providers.Rackspace.Objects;
@@ -161,11 +163,44 @@ namespace net.openstack.Providers.Rackspace
             return BuildCloudServersProviderAwareObject<LoadBalancer>(response.Data.LoadBalancer, region, identity);
         }
 
-        ///// <inheritdoc />
-        //public LoadBalancer UpdateLoadBalancer(string id, string name, LoadBalancerProtocol protocol, LoadBalancerAlgorithm algorithm, TimeSpan timeout, bool halfClosed, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+        /// <inheritdoc />
+        public LoadBalancer UpdateLoadBalancer(string id, string name = null, LoadBalancerProtocol protocol = null, LoadBalancerAlgorithm algorithm = null, TimeSpan? timeout = null, bool? halfClosed = null, string region = null, CloudIdentity identity = null)
+        {
+            if (name == null)
+                throw new ArgumentNullException("id");
+
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("id cannot be empty");
+
+            if (timeout.HasValue)
+            {
+                if(timeout.Value.Seconds > 120)
+                    throw new ArgumentOutOfRangeException("timeout");
+            }
+
+            CheckIdentity(identity);
+
+            var urlPath = new Uri(string.Format("{0}/loadbalancers", GetServiceEndpoint(identity, region)));
+
+            var response = ExecuteRESTRequest<LoadBalancerResponse>(identity, urlPath, HttpMethod.PUT,
+                new UpdateLoadBalancerRequest
+                {
+                    LoadBalancer = new UpdateLoadBalancer
+                    {
+                        Name = name,
+                        Port = protocol == null ? null : (int?)protocol.Port,
+                        Protocol = protocol == null ? null : protocol.Name,
+                        Algorithm = algorithm == null ? null : algorithm.ToString(),
+                        HalfClosed = !halfClosed.HasValue ? null : (bool?)halfClosed.Value,
+                        Timeout = !timeout.HasValue ? null : (int?)timeout.Value.Seconds
+                    }
+                });
+
+            if (response == null || response.Data == null)
+                return null;
+
+            return BuildCloudServersProviderAwareObject<LoadBalancer>(response.Data.LoadBalancer, region, identity);
+        }
 
         /// <inheritdoc />
         public void RemoveLoadBalancer(string id, string region = null, CloudIdentity identity = null)
@@ -183,45 +218,155 @@ namespace net.openstack.Providers.Rackspace
             ExecuteRESTRequest(identity, urlPath, HttpMethod.DELETE);
         }
 
-        ///// <inheritdoc />
-        //public void RemoveLoadBalancers(IEnumerable<string> id, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+        /// <inheritdoc />
+        public void RemoveLoadBalancers(IEnumerable<string> ids, string region = null, CloudIdentity identity = null)
+        {
+            if (ids == null)
+                throw new ArgumentNullException("ids");
 
-        ///// <inheritdoc />
-        //public LoadBalancer WaitForLoadBalancerState(string serverId, string expectedState, string[] errorStates, int refreshCount = 600, TimeSpan? refreshDelay = null, Action<int> progressUpdatedCallback = null, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+            if (!ids.Any())
+                throw new ArgumentException("ids must contain at least 1 item.");
 
-        ///// <inheritdoc />
-        //public LoadBalancer WaitForLoadBalancerState(string serverId, string[] expectedStates, string[] errorStates, int refreshCount = 600, TimeSpan? refreshDelay = null,Action<int> progressUpdatedCallback = null, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+            CheckIdentity(identity);
 
-        ///// <inheritdoc />
-        //public LoadBalancer WaitForLoadBalancerActive(string serverId, int refreshCount = 600, TimeSpan? refreshDelay = null, Action<int> progressUpdatedCallback = null, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+            var urlPath = new Uri(string.Format("{0}/loadbalancers", GetServiceEndpoint(identity, region)));
 
-        ///// <inheritdoc />
-        //public void WaitForLoadBalancerDeleted(string serverId, int refreshCount = 600, TimeSpan? refreshDelay = null, Action<int> progressUpdatedCallback = null, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+            int index = 0;
+            const int batchSize = 10;
+
+            var idBatch = ids.Skip(index).Take(batchSize);
+            while (idBatch.Any())
+            {
+                var queryStringParameters = idBatch.ToDictionary(id => "id", id => id);
+
+                ExecuteRESTRequest(identity, urlPath, HttpMethod.DELETE, queryStringParameter: queryStringParameters);
+
+                index = index + batchSize;
+                idBatch = ids.Skip(index).Take(batchSize);
+            }
+        }
+
+        /// <inheritdoc />
+        public LoadBalancer WaitForLoadBalancerState(string loadBalancerId, LoadBalancerState expectedState, LoadBalancerState[] errorStates, int refreshCount = 600, TimeSpan? refreshDelay = null, string region = null, CloudIdentity identity = null)
+        {
+            if (loadBalancerId == null)
+                throw new ArgumentNullException("loadBalancerId");
+            if (expectedState == null)
+                throw new ArgumentNullException("expectedState");
+            if (errorStates == null)
+                throw new ArgumentNullException("errorStates");
+            if (string.IsNullOrEmpty(loadBalancerId))
+                throw new ArgumentException("loadBalancerId cannot be empty");
+            if (refreshCount < 0)
+                throw new ArgumentOutOfRangeException("refreshCount");
+            if (refreshDelay < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException("refreshDelay");
+            CheckIdentity(identity);
+
+            return WaitForLoadBalancerState(loadBalancerId, new[] { expectedState }, errorStates, refreshCount, refreshDelay ?? TimeSpan.FromMilliseconds(2400), region, identity);
+
+        }
+
+        /// <inheritdoc />
+        public LoadBalancer WaitForLoadBalancerState(string loadBalancerId, LoadBalancerState[] expectedStates, LoadBalancerState[] errorStates, int refreshCount = 600, TimeSpan? refreshDelay = null, string region = null, CloudIdentity identity = null)
+        {
+            if (loadBalancerId == null)
+                throw new ArgumentNullException("loadBalancerId");
+            if (expectedStates == null)
+                throw new ArgumentNullException("expectedStates");
+            if (errorStates == null)
+                throw new ArgumentNullException("errorStates");
+            if (string.IsNullOrEmpty(loadBalancerId))
+                throw new ArgumentException("loadBalancerId cannot be empty");
+            if (expectedStates.Length == 0)
+                throw new ArgumentException("expectedStates cannot be empty");
+            if (refreshCount < 0)
+                throw new ArgumentOutOfRangeException("refreshCount");
+            if (refreshDelay < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException("refreshDelay");
+            CheckIdentity(identity);
+
+            var serverDetails = GetLoadBalancer(loadBalancerId, region, identity);
+
+            int count = 0;
+            while (!expectedStates.Contains(serverDetails.Status) && !errorStates.Contains(serverDetails.Status) && count < refreshCount)
+            {
+                Thread.Sleep(refreshDelay ?? TimeSpan.FromMilliseconds(2400));
+                serverDetails = GetLoadBalancer(loadBalancerId, region, identity);
+                count++;
+            }
+
+            if (errorStates.Contains(serverDetails.Status))
+                throw new LoadBalancerEnteredErrorStateException(serverDetails.Status);
+
+            return BuildCloudServersProviderAwareObject<LoadBalancer>(serverDetails, region, identity);
+        }
+
+        /// <inheritdoc />
+        public LoadBalancer WaitForLoadBalancerActive(string serverId, int refreshCount = 600, TimeSpan? refreshDelay = null, string region = null, CloudIdentity identity = null)
+        {
+            if (serverId == null)
+                throw new ArgumentNullException("serverId");
+            if (string.IsNullOrEmpty(serverId))
+                throw new ArgumentException("serverId cannot be empty");
+            if (refreshCount < 0)
+                throw new ArgumentOutOfRangeException("refreshCount");
+            if (refreshDelay < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException("refreshDelay");
+            CheckIdentity(identity);
+
+            return WaitForLoadBalancerState(serverId, LoadBalancerState.Active, new[] { LoadBalancerState.Error, LoadBalancerState.Unknown }, refreshCount, refreshDelay ?? TimeSpan.FromMilliseconds(2400), region, identity);
+
+        }
+
+        /// <inheritdoc />
+        public void WaitForLoadBalancerDeleted(string serverId, int refreshCount = 600, TimeSpan? refreshDelay = null, string region = null, CloudIdentity identity = null)
+        {
+            if (serverId == null)
+                throw new ArgumentNullException("serverId");
+            if (string.IsNullOrEmpty(serverId))
+                throw new ArgumentException("serverId cannot be empty");
+            if (refreshCount < 0)
+                throw new ArgumentOutOfRangeException("refreshCount");
+            if (refreshDelay < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException("refreshDelay");
+            CheckIdentity(identity);
+
+            try
+            {
+                WaitForLoadBalancerState(serverId, LoadBalancerState.Deleted,
+                                   new[] { LoadBalancerState.Error, LoadBalancerState.Unknown },
+                                   refreshCount, refreshDelay ?? TimeSpan.FromMilliseconds(2400), region, identity);
+            }
+            catch (Core.Exceptions.Response.ItemNotFoundException) { } // there is the possibility that the load balancer can be ACTIVE for one pass and then 
+            // by the next pass a 404 is returned.  This is due to the VERY limited window in which
+            // the load balancer goes into the DELETED state before it is removed from the system.
+        }
 
         #endregion
 
         #region Load Balancer Stats
 
-        ///// <inheritdoc />
-        //public LoadBalancerStats GetLoadBalancerStats(string id, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+        /// <inheritdoc />
+        public LoadBalancerStats GetLoadBalancerStats(string id, string region = null, CloudIdentity identity = null)
+        {
+            if (id == null)
+                throw new ArgumentNullException("id");
+
+            if (string.IsNullOrEmpty(id))
+                throw new ArgumentException("id cannot be empty");
+
+            CheckIdentity(identity);
+
+            var urlPath = new Uri(string.Format("{0}/loadbalancers/{1}/stats", GetServiceEndpoint(identity, region), id));
+
+            var response = ExecuteRESTRequest<LoadBalancerStats>(identity, urlPath, HttpMethod.GET);
+
+            if (response == null || response.Data == null)
+                return null;
+
+            return response.Data;
+        }
 
         #endregion
 
@@ -247,11 +392,30 @@ namespace net.openstack.Providers.Rackspace
             return response.Data.Nodes;
         }
 
-        ///// <inheritdoc />
-        //public LoadBalancerNode GetLoadBalancerNode(string loadBalancerId, string nodeId, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+        /// <inheritdoc />
+        public LoadBalancerNode GetLoadBalancerNode(string loadBalancerId, string nodeId, string region = null, CloudIdentity identity = null)
+        {
+            if (loadBalancerId == null)
+                throw new ArgumentNullException("loadBalancerId");
+            if (nodeId == null)
+                throw new ArgumentNullException("nodeId");
+
+            if (string.IsNullOrEmpty(loadBalancerId))
+                throw new ArgumentException("loadBalancerId cannot be empty");
+            if (string.IsNullOrEmpty(nodeId))
+                throw new ArgumentException("nodeId cannot be empty");
+
+            CheckIdentity(identity);
+
+            var urlPath = new Uri(string.Format("{0}/loadbalancers/{1}/nodes/{2}", GetServiceEndpoint(identity, region), loadBalancerId, nodeId));
+
+            var response = ExecuteRESTRequest<LoadBalancerNodeResponse>(identity, urlPath, HttpMethod.GET);
+
+            if (response == null || response.Data == null)
+                return null;
+
+            return response.Data.Node;
+        }
 
         /// <inheritdoc />
         public LoadBalancerNode AddLoadBalancerNode(string loadBalancerId, string ipAddress, LoadBalancerNodeCondition condition, int port, LoadBalancerNodeType type, int? weight = null, string region = null, CloudIdentity identity = null)
@@ -306,23 +470,92 @@ namespace net.openstack.Providers.Rackspace
             return response.Data.Nodes.FirstOrDefault();
         }
 
-        ///// <inheritdoc />
-        //public LoadBalancerNode UpdateLoadBalancerNode(string loadBalancerId, string nodeId, LoadBalancerNodeCondition condition, LoadBalancerNodeType type, int weight, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+        /// <inheritdoc />
+        public LoadBalancerNode UpdateLoadBalancerNode(string loadBalancerId, string nodeId, LoadBalancerNodeCondition condition = null, LoadBalancerNodeType type = null, int? weight = null, string region = null, CloudIdentity identity = null)
+        {
+            if (loadBalancerId == null)
+                throw new ArgumentNullException("loadBalancerId");
+            if (nodeId == null)
+                throw new ArgumentNullException("nodeId");
 
-        ///// <inheritdoc />
-        //public LoadBalancerNode RemoveLoadBalancerNode(string loadBalancerId, string nodeId, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+            if (string.IsNullOrEmpty(loadBalancerId))
+                throw new ArgumentException("loadBalancerId cannot be empty");
+            if (string.IsNullOrEmpty(nodeId))
+                throw new ArgumentException("nodeId cannot be empty");
 
-        ///// <inheritdoc />
-        //public LoadBalancerNode RemoveLoadBalancerNodes(string loadBalancerId, IEnumerable<string> nodeId, string region = null, CloudIdentity identity = null)
-        //{
-        //    throw new NotImplementedException();
-        //}
+            CheckIdentity(identity);
+
+            var urlPath = new Uri(string.Format("{0}/loadbalancers/{1}/nodes/{2}", GetServiceEndpoint(identity, region), loadBalancerId, nodeId));
+
+            var response = ExecuteRESTRequest<LoadBalancerNodeResponse>(identity, urlPath, HttpMethod.PUT, body: new UpdateLoadBalancerNodeRequest
+                {
+                    Node = new UpdateLoadBalancerNode
+                        {
+                            Condition = condition == null ? null : condition.ToString(),
+                            Type = type == null ? null : type.Name,
+                            Weight = !weight.HasValue ? null : (int?)weight.Value
+                        }
+                });
+
+            if (response == null || response.Data == null)
+                return null;
+
+            return response.Data.Node;
+        }
+
+        /// <inheritdoc />
+        public void RemoveLoadBalancerNode(string loadBalancerId, string nodeId, string region = null, CloudIdentity identity = null)
+        {
+            if (loadBalancerId == null)
+                throw new ArgumentNullException("loadBalancerId");
+            if (nodeId == null)
+                throw new ArgumentNullException("nodeId");
+
+            if (string.IsNullOrEmpty(loadBalancerId))
+                throw new ArgumentException("loadBalancerId cannot be empty");
+            if (string.IsNullOrEmpty(nodeId))
+                throw new ArgumentException("nodeId cannot be empty");
+
+            CheckIdentity(identity);
+
+            var urlPath = new Uri(string.Format("{0}/loadbalancers/{1}/nodes/{2}", GetServiceEndpoint(identity, region), loadBalancerId, nodeId));
+
+            ExecuteRESTRequest(identity, urlPath, HttpMethod.DELETE);
+        }
+
+        /// <inheritdoc />
+        public void RemoveLoadBalancerNodes(string loadBalancerId, IEnumerable<string> nodeIds, string region = null, CloudIdentity identity = null)
+        {
+            if (loadBalancerId == null)
+                throw new ArgumentNullException("loadBalancerId");
+            if (nodeIds == null)
+                throw new ArgumentNullException("nodeIds");
+
+            if (string.IsNullOrEmpty(loadBalancerId))
+                throw new ArgumentException("loadBalancerId cannot be empty");
+            if (!nodeIds.Any())
+                throw new ArgumentException("must contain at leats 1 nodeId");
+
+            CheckIdentity(identity);
+
+            var urlPath = new Uri(string.Format("{0}/loadbalancers/{1}/nodes/{2}", GetServiceEndpoint(identity, region), loadBalancerId, nodeIds));
+
+            var index = 0;
+            const int count = 10;
+
+            var batch = nodeIds.Skip(index).Take(count);
+
+            while (batch.Any())
+            {
+                var queryStringParams = batch.ToDictionary(id => "id", id => id);
+
+                ExecuteRESTRequest(identity, urlPath, HttpMethod.DELETE, queryStringParameter: queryStringParams);
+
+                index = index + count;
+
+                batch = nodeIds.Skip(index).Take(count);
+            }
+        }
 
         ///// <inheritdoc />
         //public IEnumerable<LoadBalancerNodeServiceEvent> ListLoadBalancerNodeServiceEvents(string loadBalancerId, string nodeId, string region = null, CloudIdentity identity = null)
