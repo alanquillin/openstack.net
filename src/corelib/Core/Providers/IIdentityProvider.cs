@@ -287,5 +287,73 @@ namespace net.openstack.Core.Providers
         /// If no default identity is available, the value is <see langword="null"/>.
         /// </summary>
         CloudIdentity DefaultIdentity { get; }
+
+        /// <summary>
+        /// Lists the endpoints in a tenant's service catalog.
+        /// </summary>
+        /// <param name="tenantId">The tenant Id. This is obtained from <see cref="Tenant.Id"/></param>
+        /// <param name="identity">The cloud identity to use for this request. If not specified, the default identity for the current provider instance will be used.</param>
+        /// <returns>A collection of <see cref="ExtendedEndpoint"/> objects containing endpoint details.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="tenantId"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">If <paramref name="tenantId"/> is empty.</exception>
+        /// <exception cref="NotSupportedException">If the provider does not support the given <paramref name="identity"/> type.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="identity"/> is <see langword="null"/> and no default identity is available for the provider.</exception>
+        /// <exception cref="ResponseException">If the authentication request failed or the token does not exist.</exception>
+        /// <seealso href="http://docs.openstack.org/api/openstack-identity-service/2.0/content/GET_listEndpoints__v2.0_tenants__tenantId__OS-KSCATALOG_endpoints_Endpoint_Operations_OS-KSCATALOG.html">List Service Catalog Endpoints (OpenStack Identity Service API v2.0 Reference)</seealso>
+        IEnumerable<ExtendedEndpoint> ListServiceCatalogEndpoints(string tenantId, CloudIdentity identity = null);
+
+        /// <summary>
+        /// Lists the endpoints in a tenant's service catalog.
+        /// </summary>
+        /// <param name="tenantId">The tenant Id. This is obtained from <see cref="Tenant.Id"/></param>
+        /// <param name="endpointId">The endpoint Id. This is obtained from <see cref="ExtendedEndpoint.Id"/></param>
+        /// <param name="identity">The cloud identity to use for this request. If not specified, the default identity for the current provider instance will be used.</param>
+        /// <returns>A collection of <see cref="ExtendedEndpoint"/> objects containing endpoint details.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="tenantId"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">If <paramref name="tenantId"/> is empty.</exception>
+        /// <exception cref="ArgumentNullException">If <paramref name="endpointId"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">If <paramref name="endpointId"/> is empty.</exception>
+        /// <exception cref="NotSupportedException">If the provider does not support the given <paramref name="identity"/> type.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="identity"/> is <see langword="null"/> and no default identity is available for the provider.</exception>
+        /// <exception cref="ResponseException">If the authentication request failed or the token does not exist.</exception>
+        /// <seealso href="http://docs.openstack.org/api/openstack-identity-service/2.0/content/GET_getEndpoint__v2.0_tenants__tenantId__OS-KSCATALOG_endpoints__endpointId__Endpoint_Operations_OS-KSCATALOG.html">List Service Catalog Endpoint (OpenStack Identity Service API v2.0 Reference)</seealso>
+
+        ExtendedEndpoint GetServiceCatalogEndpoint(string tenantId, string endpointId, CloudIdentity identity = null);
+
+        /// <summary>
+        /// Lists the endpoints in a tenant's service catalog.
+        /// </summary>
+        /// <param name="tenantId">The tenant Id. This is obtained from <see cref="Tenant.Id"/></param>
+        /// <param name="endpointTemplateId">The endpoint template Id. This is obtained from <see cref="EndpointTemplate.Id"/></param>
+        /// <param name="identity">The cloud identity to use for this request. If not specified, the default identity for the current provider instance will be used.</param>
+        /// <returns>A collection of <see cref="ExtendedEndpoint"/> objects containing endpoint details.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="tenantId"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">If <paramref name="tenantId"/> is empty.</exception>
+        /// <exception cref="ArgumentNullException">If <paramref name="endpointTemplateId"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">If <paramref name="endpointTemplateId"/> is empty.</exception>
+        /// <exception cref="NotSupportedException">If the provider does not support the given <paramref name="identity"/> type.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="identity"/> is <see langword="null"/> and no default identity is available for the provider.</exception>
+        /// <exception cref="ResponseException">If the authentication request failed or the token does not exist.</exception>
+        /// <seealso href="http://docs.openstack.org/api/openstack-identity-service/2.0/content/GET_listEndpoints__v2.0_tenants__tenantId__OS-KSCATALOG_endpoints_Endpoint_Operations_OS-KSCATALOG.html">List Service Catalog Endpoints (OpenStack Identity Service API v2.0 Reference)</seealso>
+
+        ExtendedEndpoint AddServiceCatalogEndpoint(string tenantId, string endpointTemplateId, CloudIdentity identity = null);
+
+        /// <summary>
+        /// Lists the endpoints in a tenant's service catalog.
+        /// </summary>
+        /// <param name="tenantId">The tenant Id. This is obtained from <see cref="Tenant.Id"/></param>
+        /// <param name="endpointId">The endpoint Id. This is obtained from <see cref="ExtendedEndpoint.Id"/></param>
+        /// <param name="identity">The cloud identity to use for this request. If not specified, the default identity for the current provider instance will be used.</param>
+        /// <returns><see langword="true"/> if the endpoint was successfully deleted; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="tenantId"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">If <paramref name="tenantId"/> is empty.</exception>
+        /// <exception cref="ArgumentNullException">If <paramref name="endpointId"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">If <paramref name="endpointId"/> is empty.</exception>
+        /// <exception cref="NotSupportedException">If the provider does not support the given <paramref name="identity"/> type.</exception>
+        /// <exception cref="InvalidOperationException">If <paramref name="identity"/> is <see langword="null"/> and no default identity is available for the provider.</exception>
+        /// <exception cref="ResponseException">If the authentication request failed or the token does not exist.</exception>
+        /// <seealso href="http://docs.openstack.org/api/openstack-identity-service/2.0/content/GET_getEndpoint__v2.0_tenants__tenantId__OS-KSCATALOG_endpoints__endpointId__Endpoint_Operations_OS-KSCATALOG.html">List Service Catalog Endpoint (OpenStack Identity Service API v2.0 Reference)</seealso>
+
+        bool DeleteServiceCatalogEndpoint(string tenantId, string endpointId, CloudIdentity identity = null);
     }
 }
